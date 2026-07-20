@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OfficeConnect - Ultimate Pro Complete</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SCRIPT RESMI GOOGLE IDENTITY SERVICES -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- SCRIPT FIREBASE UNTUK REAL-TIME DATABASE -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        .floor-plan { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .room { background: #e2e8f0; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .room:hover { background: #cbd5e1; transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .room.selected { background: #4f46e5; color: white; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4); }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        @keyframes pop { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .badge-pop { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-panel { animation: slideUpFade 0.4s ease-out forwards; }
+        
+        @keyframes msgPop { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .animate-msg { animation: msgPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes modalScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-modal { animation: modalScale 0.3s ease-out forwards; }
+
+        /* TAMPILAN RESPONSIVE MOBILE */
+        .mobile-mode { max-width: 480px !important; margin: 0 auto !important; padding: 10px !important; }
+        .mobile-mode .flex-layout { flex-direction: column !important; gap: 1rem !important; }
+        .mobile-mode .w-1-3 { width: 100% !important; padding-right: 0 !important; border-right: none !important; max-height: none; overflow-y: visible; }
+        .mobile-mode #user-list { max-height: 250px; overflow-y: auto; border-bottom: 2px dashed #e5e7eb; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .mobile-mode .w-2-3 { width: 100% !important; padding-left: 0 !important; }
+        .mobile-mode .header-layout { flex-direction: column !important; text-align: center !important; gap: 1rem; }
+        .mobile-mode .header-layout > div { flex-direction: column !important; width: 100% !important; justify-content: center !important; gap: 1rem !important;}
+        .mobile-mode .header-layout img { margin: 0 auto; height: 120px !important; } 
+        .mobile-mode .text-right { text-align: center !important; margin-right: 0 !important; }
+        .mobile-mode #notif-panel { right: auto !important; left: 50% !important; transform: translateX(-50%) !important; width: 300px !important; z-index: 70;}
+        .mobile-mode #chat-panel { height: 28rem; }
+        
+        .avatar-img { object-fit: cover; border-radius: 50%; }
+        
+        /* Tombol Upload Custom */
+        .custom-file-upload { display: inline-block; cursor: pointer; }
+        .custom-file-upload input[type="file"] { display: none; }
+    </style>
+</head>
+<body class="bg-indigo-50 p-6 font-sans relative min-h-screen flex flex-col justify-center overflow-x-hidden">
+
+    <!-- LAYAR PEMILIHAN PERANGKAT -->
+    <div id="device-screen" class="fixed inset-0 z-[60] bg-indigo-50 flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="bg-white p-10 rounded-[2rem] shadow-2xl text-center max-w-md w-[90%] animate-modal">
+            <img src="logo.png" alt="OfficeConnect Logo" class="h-40 w-auto object-contain mx-auto mb-6" onerror="this.src='https://via.placeholder.com/200x80?text=OfficeConnect'">
+            <p class="text-gray-500 mb-8 font-medium" data-i18n="chooseDevice">Pilih tampilan perangkatmu sebelum masuk</p>
+            <div class="space-y-4">
+                <button onclick="selectDevice('desktop')" class="w-full bg-white border-2 border-indigo-100 text-indigo-700 py-4 rounded-xl font-bold hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-3 text-lg">
+                    💻 <span data-i18n="desktopBtn">Desktop / Laptop</span>
+                </button>
+                <button onclick="selectDevice('mobile')" class="w-full bg-white border-2 border-indigo-100 text-indigo-700 py-4 rounded-xl font-bold hover:bg-indigo-600 hover:text-white transition-all shadow-sm flex items-center justify-center gap-3 text-lg">
+                    📱 <span data-i18n="mobileBtn">Mobile / HP</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAMPILAN AWAL (LOGIN & DAFTAR) -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-indigo-50 flex flex-col items-center justify-center transition-all duration-700 ease-in-out transform hidden">
+        <div class="bg-white p-8 rounded-2xl shadow-xl text-center max-w-sm w-full transition-transform hover:shadow-2xl overflow-hidden relative">
+            <div class="flex justify-center mb-6">
+                <img src="logo.png" alt="OfficeConnect Logo" class="h-40 w-auto object-contain transform hover:scale-105 transition-transform duration-300" onerror="this.src='https://via.placeholder.com/200x80?text=OfficeConnect'">
+            </div>
+            
+            <div id="login-section" class="transition-all duration-300">
+                <p class="text-gray-500 mb-8 text-sm mt-[-10px]" data-i18n="loginDesc">Gunakan akun Google-mu untuk masuk</p>
+                <div class="flex justify-center mb-4">
+                    <div id="g_id_onload" data-client_id="981090657032-kvnofvbcq2ki8s0ai9huf5cd6j94n3v4.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleCredentialResponse" data-auto_prompt="false"></div>
+                    <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
+                </div>
+                <div class="my-5 flex items-center gap-2">
+                    <div class="h-px bg-gray-200 flex-1"></div>
+                    <span class="text-xs text-gray-400 font-bold uppercase tracking-wider" data-i18n="orText">ATAU</span>
+                    <div class="h-px bg-gray-200 flex-1"></div>
+                </div>
+                <button onclick="toggleRegisterPanel()" class="w-full bg-white border-2 border-indigo-100 text-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all text-sm mb-4" data-i18n="btnRegisterAsk">Belum terdaftar? Daftar Karyawan</button>
+                <button onclick="mockGoogleLogin()" class="text-xs text-gray-400 hover:text-indigo-500 hover:underline transition-colors" data-i18n="btnGuest">Masuk dengan mode Tamu / Testing</button>
+            </div>
+
+            <div id="register-section" class="hidden text-left transition-all duration-300">
+                <h3 class="font-extrabold text-gray-800 mb-5 text-center text-lg" data-i18n="regTitle">Pendaftaran Karyawan</h3>
+                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide" data-i18n="regEmail">Email Google Anda</label>
+                <input type="email" id="reg-email" class="w-full mb-3 border-2 border-gray-100 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none transition-all shadow-sm" placeholder="contoh@gmail.com">
+                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide" data-i18n="regName">Nama Panggilan</label>
+                <input type="text" id="reg-name" class="w-full mb-3 border-2 border-gray-100 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none transition-all shadow-sm" placeholder="Cth: Lica / Angelica">
+                <label class="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wide" data-i18n="regRole">Pangkat / Jabatan</label>
+                <input type="text" id="reg-role" class="w-full mb-6 border-2 border-gray-100 rounded-xl p-3 text-sm focus:border-indigo-400 outline-none transition-all shadow-sm" placeholder="Cth: Network Engineer">
+                <button onclick="saveRegistration()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all mb-2 shadow-md hover:-translate-y-0.5 text-sm" data-i18n="btnSaveReg">Simpan Data Karyawan</button>
+                <button onclick="toggleRegisterPanel()" class="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-100 transition-all border border-gray-200 text-sm" data-i18n="btnCancelReg">Batal / Kembali ke Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAMPILAN ONBOARDING -->
+    <div id="onboarding-screen" class="hidden flex flex-col items-center justify-center transition-all duration-700 min-h-screen absolute inset-0 z-40 bg-indigo-50/95 backdrop-blur-sm opacity-0">
+        <div class="bg-white p-10 rounded-[2rem] shadow-2xl text-center max-w-md w-full animate-modal">
+            <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6 transform hover:rotate-12 transition-transform duration-300">✨</div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2" data-i18n="welcomeOnboard">Halo! Selamat datang di OfficeConnect!</h2>
+            <p class="text-gray-500 mb-8 text-sm"><span data-i18n="verifiedEmailLabel">Email terverifikasi:</span> <br><span id="verified-email-text" class="font-semibold text-indigo-600"></span></p>
+            <div class="bg-orange-50 border border-orange-200 text-orange-700 p-3 rounded-xl text-xs mb-6 font-medium text-left" data-i18n="onboardInfo">Sepertinya kamu belum terdaftar. Isi data di bawah ini untuk pertama kali masuk!</div>
+            <div class="space-y-5 text-left mb-8">
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="askName">Kamu mau dipanggil dengan siapa?</label>
+                    <input type="text" id="onboard-name-input" class="w-full border-2 border-gray-200 rounded-xl p-3.5 focus:border-indigo-500 transition-all">
+                </div>
+                <div class="group">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1" data-i18n="askRole">Dan apa jabatanmu?</label>
+                    <input type="text" id="onboard-role-input" class="w-full border-2 border-gray-200 rounded-xl p-3.5 focus:border-indigo-500 transition-all">
+                </div>
+            </div>
+            <button onclick="finishOnboarding()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg hover:-translate-y-1" data-i18n="btnEnterWorkspace">Mulai Kerja</button>
+        </div>
+    </div>
+
+    <!-- APLIKASI UTAMA -->
+    <div id="main-app" class="hidden max-w-5xl w-full mx-auto bg-white p-6 rounded-2xl shadow-xl transition-all duration-700 opacity-0 transform translate-y-4 relative z-10">
+        
+        <!-- HEADER LAYOUT DENGAN LOGO 200px -->
+        <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-5 header-layout">
+            <img src="logo.png" alt="OfficeConnect Logo" style="height: 200px; width: auto;" class="object-contain cursor-pointer shrink-0" onerror="this.src='https://via.placeholder.com/200x80?text=OfficeConnect'">
+            <div class="flex items-center gap-4">
+                <div class="text-right mr-2 flex flex-col justify-center">
+                    <p id="display-name" class="font-extrabold text-gray-900 text-xl tracking-tight leading-tight"></p>
+                    <p id="display-role" class="text-sm font-bold text-indigo-500 leading-tight mt-0.5"></p>
+                </div>
+                <div class="relative">
+                    <button onclick="toggleNotifPanel()" class="p-3 bg-white border-2 border-gray-100 rounded-xl hover:bg-gray-50 transition-all relative shadow-sm">
+                        🔔<span id="notif-badge-top" class="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full hidden badge-pop border-2 border-white shadow-sm">0</span>
+                    </button>
+                    <div id="notif-panel" class="absolute right-0 top-14 w-80 bg-white border-2 border-indigo-50 rounded-2xl shadow-2xl p-5 hidden z-50 transform origin-top-right transition-all">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                            <h4 class="font-extrabold text-gray-800 text-lg" data-i18n="notifTitle">Notifikasi</h4>
+                        </div>
+                        <div id="notif-list" class="space-y-3 text-sm max-h-64 overflow-y-auto pr-1">
+                            <p class="text-gray-400 text-center italic py-6" id="empty-notif" data-i18n="noNotif">Belum ada notifikasi.</p>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="openSettings()" class="bg-gray-50 border border-gray-200 hover:bg-gray-100 text-gray-700 px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2">
+                    <span>⚙️</span> <span data-i18n="settings">Pengaturan</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- STATUS PRIBADI -->
+        <div class="mb-8 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
+            <div class="p-5 flex justify-between items-center flex-wrap gap-4">
+                <p class="text-gray-700"><span data-i18n="myStatus" class="font-medium">Status Saya:</span> <span id="my-status" class="font-bold text-indigo-700 ml-1">Available</span></p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="setSpecificStatus('Available')" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md" data-i18n="btnAvailable">Tersedia</button>
+                    <button id="btn-sibuk-trigger" onclick="openBusyTime()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-md" data-i18n="btnBusy">Sibuk</button>
+                    <div id="busy-time-wrapper" class="hidden flex gap-1 items-center bg-white border border-gray-200 rounded-lg p-1 shadow-sm transition-all duration-300">
+                        <input type="time" id="fast-start-time" class="text-xs border-none focus:outline-none p-1 w-20 bg-transparent text-gray-700 font-medium">
+                        <span class="text-gray-400 font-bold">-</span>
+                        <input type="time" id="fast-end-time" class="text-xs border-none focus:outline-none p-1 w-20 bg-transparent text-gray-700 font-medium">
+                        <button onclick="setFastHourlySchedule()" class="bg-red-500 text-white px-4 py-1.5 rounded-md text-sm font-semibold hover:bg-red-600 transition-all" data-i18n="btnBusyTime">Sibuk</button>
+                        <button onclick="closeBusyTime()" class="text-gray-400 hover:text-gray-600 px-2 font-bold">✕</button>
+                    </div>
+                    <button onclick="toggleOffPanel()" class="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-700 transition-all shadow-md" data-i18n="btnOff">Atur Cuti / OFF</button>
+                </div>
+            </div>
+            
+            <div id="off-panel" class="hidden px-5 pb-5 pt-2 border-t border-indigo-100/50 bg-white/40">
+                <p class="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide" data-i18n="offTitle">Pengaturan Waktu OFF / Izin / Sakit / Libur</p>
+                <div class="flex flex-col sm:flex-row gap-3 items-end">
+                    <div class="w-full sm:w-auto flex-1">
+                        <label class="text-[10px] text-gray-500 font-bold mb-1 block uppercase" data-i18n="offDesc">Keterangan:</label>
+                        <select id="off-type" class="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white font-medium">
+                            <option value="OFF" data-i18n="offOpt1">OFF (Tidak Masuk)</option>
+                            <option value="Izin" data-i18n="offOpt2">Izin</option>
+                            <option value="Sakit" data-i18n="offOpt3">Sakit</option>
+                            <option value="Libur" data-i18n="offOpt4">Libur / Cuti</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-auto flex-1">
+                        <label class="text-[10px] text-gray-500 font-bold mb-1 block uppercase" data-i18n="offStart">Dari Tanggal:</label>
+                        <input type="date" id="off-start-date" class="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white">
+                    </div>
+                    <div class="w-full sm:w-auto flex-1">
+                        <label class="text-[10px] text-gray-500 font-bold mb-1 block uppercase" data-i18n="offEnd">Sampai Tanggal:</label>
+                        <input type="date" id="off-end-date" class="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none bg-white">
+                    </div>
+                    <button onclick="setOffSchedule()" class="w-full sm:w-auto bg-emerald-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-emerald-700 transition-all shadow-md" data-i18n="btnApply">Terapkan</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-8 flex-layout">
+            <!-- DAFTAR KARYAWAN -->
+            <div class="w-1/3 pr-2 w-1-3 flex flex-col h-full">
+                <h2 class="font-bold mb-3 text-gray-800 text-lg" data-i18n="empList">Daftar Karyawan</h2>
+                <div class="mb-4 relative shrink-0">
+                    <input type="text" id="search-user-input" oninput="renderUsers()" class="w-full border-2 border-gray-100 rounded-xl p-3 pl-10 focus:outline-none focus:border-indigo-400 text-sm text-gray-700 shadow-sm" placeholder="Cari karyawan..." data-i18n-placeholder="searchEmp">
+                    <span class="absolute left-3.5 top-3 text-gray-400">🔍</span>
+                </div>
+                <div id="user-list" class="space-y-3 overflow-y-auto max-h-[500px] pr-2 pb-4 flex-1"></div>
+            </div>
+            
+            <div class="w-2/3 pl-2 w-2-3">
+                <div id="profile-panel" class="border border-gray-100 p-8 rounded-2xl bg-white shadow-sm hidden relative animate-panel text-center sm:text-left">
+                    <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-6">
+                        <div id="view-profile-avatar" class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-3xl flex items-center justify-center font-bold text-4xl uppercase shrink-0 shadow-lg overflow-hidden"></div>
+                        <div>
+                            <h2 id="profile-name" class="text-3xl font-extrabold text-gray-800 mb-1"></h2>
+                            <p id="profile-role" class="text-indigo-600 font-semibold mb-1"></p>
+                            <p id="profile-status" class="text-gray-500 text-sm"></p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button onclick="openMeetingPanel()" class="flex-1 bg-purple-600 text-white px-4 py-3 rounded-xl text-sm font-semibold hover:bg-purple-700 transition-all shadow-md" data-i18n="btnReq">Request Meeting</button>
+                        <button onclick="openChatPanel()" class="flex-1 bg-blue-500 text-white px-4 py-3 rounded-xl text-sm font-semibold hover:bg-blue-600 transition-all shadow-md" data-i18n="btnMsg">Kirim Pesan</button>
+                    </div>
+                </div>
+
+                <div id="map-panel" class="border border-gray-100 p-8 rounded-2xl bg-white hidden shadow-sm animate-panel">
+                    <h3 class="font-bold text-lg text-gray-800 mb-5" data-i18n="selRoom">Pilih Tempat Bertemu:</h3>
+                    <div class="floor-plan mb-4">
+                        <div class="room" onclick="selectRoom(this)">Ruang Meeting A</div>
+                        <div class="room" onclick="selectRoom(this)">Ruang Meeting B</div>
+                        <div class="room" onclick="selectRoom(this)">Kantin</div>
+                        <div class="room" onclick="selectRoom(this)">Lobby</div>
+                    </div>
+                    <div class="mb-6">
+                        <input type="text" id="custom-room-input" class="w-full border-2 border-gray-100 rounded-xl p-3.5 focus:outline-none focus:border-indigo-500 text-sm text-gray-700" placeholder="Tempat lain? Ketik di sini..." oninput="handleCustomRoomInput()">
+                    </div>
+                    <button onclick="confirmMeeting()" class="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold hover:bg-green-700 transition-all shadow-md" data-i18n="btnConf">Konfirmasi Pertemuan</button>
+                </div>
+
+                <div id="chat-panel" class="border border-gray-100 p-6 rounded-2xl bg-white hidden shadow-sm flex flex-col h-[28rem] animate-panel bg-gray-50/30">
+                    <h3 id="chat-with" class="font-bold text-gray-800 mb-4 border-b border-gray-200 pb-3">Chat</h3>
+                    <div id="message-box" class="flex-1 overflow-y-auto mb-4 pr-2 space-y-2 rounded scroll-smooth"></div>
+                    <div class="flex gap-2 mt-auto pt-2">
+                        <input type="text" id="chat-input" class="flex-1 border-2 border-gray-100 rounded-xl p-3 focus:outline-none focus:border-blue-400 text-sm" placeholder="Tulis pesan..." onkeypress="handleEnter(event)">
+                        <button onclick="sendMessage()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-md" data-i18n="btnSend">Kirim</button>
+                    </div>
+                </div>
+
+                <div id="empty-state" class="text-gray-400 text-center py-20 animate-panel" data-i18n="emptyState">
+                    <div class="text-6xl mb-4 opacity-50">👋</div>
+                    Pilih karyawan dari daftar di sebelah kiri untuk berinteraksi.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PENGATURAN -->
+    <div id="settings-modal" class="fixed inset-0 bg-gray-900/60 hidden flex items-center justify-center z-50 backdrop-blur-sm transition-opacity duration-300 opacity-0 overflow-y-auto pt-10 pb-10">
+        <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-[420px] max-w-[90%] transform transition-all duration-300 scale-95 opacity-0 my-auto" id="settings-box">
+            <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2"><span>⚙️</span> <span data-i18n="settings">Pengaturan</span></h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-red-500 text-2xl font-bold leading-none w-8 h-8 rounded-full hover:bg-red-50 transition-colors flex items-center justify-center">&times;</button>
+            </div>
+
+            <div class="mb-6 border-b border-gray-100 pb-6">
+                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="modalBusyTitle">Jadwal Jam Sibuk (Modal)</p>
+                <div class="bg-indigo-50/50 border border-indigo-100 p-5 rounded-2xl transition-all">
+                    <p class="text-[11px] font-bold text-indigo-400 mb-2 uppercase" data-i18n="modalBusyAuto">Otomatis Sibuk Jam:</p>
+                    <div class="flex gap-2 mb-3">
+                        <input type="time" id="start-time" class="flex-1 border-2 border-indigo-50 bg-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-700 shadow-sm">
+                        <span class="flex items-center text-gray-400 font-bold">-</span>
+                        <input type="time" id="end-time" class="flex-1 border-2 border-indigo-50 bg-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-700 shadow-sm">
+                    </div>
+                    <button onclick="setHourlySchedule()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md" data-i18n="btnSetBusy">Setel Jam Sibuk</button>
+                    
+                    <div class="h-px bg-indigo-100 w-full my-4"></div>
+                    <p class="text-[11px] font-bold text-indigo-400 mb-2 uppercase" data-i18n="modalManualStatus">Status Manual:</p>
+                    <div class="flex gap-2">
+                        <button onclick="setSpecificStatus('Available')" class="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-all" data-i18n="btnAvailManual">Tersedia</button>
+                        <button onclick="setSpecificStatus('Busy')" class="flex-1 bg-red-50 text-red-600 border border-red-200 py-2.5 rounded-xl text-sm font-bold hover:bg-red-100 transition-all" data-i18n="btnBusyManual">Sibuk</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="displayMode">Tampilan Layar</p>
+                <div class="flex gap-2">
+                    <button onclick="switchViewMode('desktop')" class="flex-1 bg-white border-2 border-gray-100 text-gray-700 py-2 rounded-xl font-bold hover:border-indigo-300 transition-all text-sm shadow-sm">💻 <span data-i18n="desktopBtn">Desktop / Laptop</span></button>
+                    <button onclick="switchViewMode('mobile')" class="flex-1 bg-white border-2 border-gray-100 text-gray-700 py-2 rounded-xl font-bold hover:border-indigo-300 transition-all text-sm shadow-sm">📱 <span data-i18n="mobileBtn">Mobile / HP</span></button>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="accProfile">Profil Akun</p>
+                <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl transition-all">
+                    <div class="flex items-start gap-4 mb-4">
+                        <div id="modal-avatar" class="w-14 h-14 mt-1 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl flex items-center justify-center font-bold text-2xl uppercase shrink-0 shadow-inner overflow-hidden relative group"></div>
+                        <div class="flex-1">
+                            <input type="text" id="edit-name-input" class="w-full border-b-2 border-gray-200 bg-transparent py-1.5 mb-2 font-bold text-gray-800 focus:outline-none focus:border-indigo-500 text-sm" placeholder="Nama Panggilan">
+                            <input type="text" id="edit-role-input" class="w-full border-b-2 border-gray-200 bg-transparent py-1.5 mb-2 text-indigo-600 font-medium focus:outline-none focus:border-indigo-500 text-sm" placeholder="Jabatan / Role">
+                            
+                            <!-- UPLOAD FOTO DARI GALERI -->
+                            <label class="custom-file-upload text-[11px] text-indigo-600 font-bold bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors mt-1 flex items-center gap-2">
+                                📷 <span data-i18n="btnUploadPhoto">Pilih Foto Galeri...</span>
+                                <input type="file" id="edit-avatar-input" accept="image/*" onchange="previewFileName()">
+                            </label>
+                            <p id="file-name-preview" class="text-[10px] text-gray-400 mt-1 hidden"></p>
+
+                            <p id="modal-display-email" class="text-xs text-gray-400 truncate mt-2"></p>
+                        </div>
+                    </div>
+                    <button onclick="updateProfile()" class="w-full bg-white border border-gray-200 text-gray-700 py-2.5 rounded-xl font-bold hover:bg-gray-50 transition-all text-sm shadow-sm" data-i18n="btnSaveProfile">Simpan Perubahan</button>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="langPref">Preferensi Bahasa</p>
+                <select id="lang-select" onchange="changeLanguage()" class="w-full border-2 border-gray-100 rounded-xl p-3.5 bg-gray-50 focus:outline-none focus:border-indigo-500 text-gray-700 font-medium cursor-pointer">
+                    <option value="id">🇮🇩 Bahasa Indonesia</option>
+                    <option value="en">🇬🇧 English</option>
+                    <option value="de">🇩🇪 Deutsch (Jerman)</option>
+                    <option value="ru">🇷🇺 Русский (Rusia)</option>
+                </select>
+            </div>
+
+            <div class="pt-2 space-y-3">
+                <button onclick="logoutApp()" class="w-full bg-orange-50 text-orange-600 font-bold py-3.5 rounded-xl hover:bg-orange-100 transition-all flex justify-center items-center gap-2 group" data-i18n="btnLogout">Logout Akun Google</button>
+                <button onclick="deleteAccount()" class="w-full bg-red-50 text-red-600 font-bold py-3.5 rounded-xl hover:bg-red-100 transition-all flex justify-center items-center gap-2 group" data-i18n="btnDeleteAcc">Hapus Akun (Keluar Kerja)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO NOTIFIKASI -->
+    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script>
+        // --- 1. KONFIGURASI FIREBASE REALTIME ---
+        // PENTING: ISI BAGIAN INI DENGAN DATA DARI FIREBASE CONSOLE-MU AGAR HP & LAPTOP BISA TERHUBUNG!
+const firebaseConfig = {
+  apiKey: "AIzaSyBlfPXVihnqMe7U1WafFSE0uPpy1kds36Q",
+  authDomain: "officeconnect-d7e85.firebaseapp.com",
+  databaseURL: "https://officeconnect-d7e85-default-rtdb.firebaseio.com",
+  projectId: "officeconnect-d7e85",
+  storageBucket: "officeconnect-d7e85.firebasestorage.app",
+  messagingSenderId: "412033644606",
+  appId: "1:412033644606:web:fe6045aa7c5606fa92796f"
+};
+
+        const useFirebase = firebaseConfig.apiKey !== "";
+        let dbRef = null;
+        if (useFirebase) {
+            firebase.initializeApp(firebaseConfig);
+            dbRef = firebase.database();
+            console.log("🟢 Firebase Realtime Database AKTIF!");
+        } else {
+            console.log("🟠 Mode Offline (Local Storage) AKTIF. Isi Firebase Config untuk Mode Real-time.");
+        }
+
+        // --- 2. KAMUS BAHASA ---
+        const dictionary = {
+            id: {
+                loginDesc: "Gunakan akun Google-mu untuk masuk", btnGoogle: "Masuk dengan Google", settings: "Pengaturan",
+                myStatus: "Status Saya:", btnDnd: "Ubah DND", empList: "Daftar Karyawan", btnReq: "Request Meeting",
+                btnMsg: "Kirim Pesan", selRoom: "Pilih Tempat Bertemu:", btnConf: "Konfirmasi Pertemuan", btnSend: "Kirim",
+                emptyState: "Pilih karyawan dari daftar di sebelah kiri untuk berinteraksi.", accProfile: "Profil Akun",
+                langPref: "Preferensi Bahasa", btnLogout: "Logout Akun", btnSaveProfile: "Simpan Perubahan",
+                statusAvail: "Tersedia", statusBusy: "Sibuk", statusOffline: "Offline (Tidak Aktif)", you: "(Anda)", hi: "Hai, ",
+                alertSelf: "Ini adalah profil Anda sendiri.", alertEmpty: "Nama dan Jabatan tidak boleh kosong!",
+                alertSaved: "Profil berhasil diperbarui!", alertMeeting: "Permintaan meeting terkirim!",
+                chatWith: "Chat dengan ", welcomeOnboard: "Halo! Selamat datang di OfficeConnect!", 
+                askName: "Kamu mau dipanggil dengan siapa?", askRole: "Dan apa jabatanmu?", btnEnterWorkspace: "Mulai Kerja",
+                customRoom: "Tempat lain? Ketik di sini...", alertNoRoom: "Pilih atau ketik ruangan dulu!",
+                chatPlaceholder: "Tulis pesan...", notifTitle: "Notifikasi", noNotif: "Belum ada notifikasi.",
+                notifMsg: "mengirim pesan baru!", notifMeet: "mengajak meeting!", displayMode: "Tampilan Layar",
+                searchEmp: "Cari karyawan...", chooseDevice: "Pilih tampilan perangkatmu sebelum masuk", desktopBtn: "Desktop / Laptop", mobileBtn: "Mobile / HP",
+                orText: "ATAU", btnRegisterAsk: "Belum terdaftar? Daftar Karyawan", btnGuest: "Masuk dengan mode Tamu / Testing",
+                regTitle: "Pendaftaran Karyawan", regEmail: "Email Google Anda", regName: "Nama Panggilan", regRole: "Pangkat / Jabatan",
+                btnSaveReg: "Simpan Data Karyawan", btnCancelReg: "Batal / Kembali ke Login",
+                onboardInfo: "Sepertinya kamu belum terdaftar. Isi data di bawah ini untuk pertama kali masuk!",
+                verifiedEmailLabel: "Email terverifikasi:", btnAvailable: "Tersedia", btnBusy: "Sibuk", btnOff: "Atur Cuti / OFF", btnBusyTime: "Sibuk",
+                offTitle: "Pengaturan Waktu OFF / Izin / Sakit / Libur", offDesc: "Keterangan:", offOpt1: "OFF (Tidak Masuk)", offOpt2: "Izin", offOpt3: "Sakit", offOpt4: "Libur / Cuti",
+                offStart: "Dari Tanggal:", offEnd: "Sampai Tanggal:", btnApply: "Terapkan", modalBusyTitle: "Jadwal Jam Sibuk (Modal)", modalBusyAuto: "Otomatis Sibuk Jam:", btnSetBusy: "Setel Jam Sibuk",
+                modalManualStatus: "Status Manual:", btnAvailManual: "Tersedia", btnBusyManual: "Sibuk", btnDeleteAcc: "Hapus Akun (Keluar Kerja)", confirmDelete: "Yakin ingin menghapus akun ini secara permanen?", alertDeleted: "Akun berhasil dihapus permanen.", alertDuplicate: "Maaf, nama ini sudah terdaftar di email yang lain. Silakan gunakan nama lain.", btnUploadPhoto: "Pilih Foto Galeri..."
+            },
+            en: {
+                loginDesc: "Use your Google account to sign in", settings: "Settings", myStatus: "My Status:", 
+                empList: "Employee List", btnReq: "Request Meeting", btnMsg: "Send Message", selRoom: "Select Meeting Room:", 
+                btnConf: "Confirm Meeting", btnSend: "Send", emptyState: "Select an employee from the list to interact.", 
+                accProfile: "Account Profile", langPref: "Language Preference", btnLogout: "Sign out", btnSaveProfile: "Save Changes",
+                statusAvail: "Available", statusBusy: "Busy", statusOffline: "Offline (Inactive)", you: "(You)", hi: "Hi, ",
+                alertSelf: "This is your own profile.", alertEmpty: "Name and Role cannot be empty!", alertSaved: "Profile updated successfully!", 
+                alertMeeting: "Meeting request sent!", chatWith: "Chat with ", welcomeOnboard: "Hello! Welcome to OfficeConnect!", 
+                askName: "What would you like to be called?", askRole: "And what is your role?", btnEnterWorkspace: "Start Working",
+                customRoom: "Other place? Type here...", alertNoRoom: "Select or type a room first!", chatPlaceholder: "Type a message...", 
+                notifTitle: "Notifications", noNotif: "No notifications yet.", notifMsg: "sent a new message!", notifMeet: "invited you to a meeting!", 
+                displayMode: "Display Mode", searchEmp: "Search employee...", chooseDevice: "Choose your device view before entering", 
+                desktopBtn: "Desktop / Laptop", mobileBtn: "Mobile / Phone", orText: "OR", btnRegisterAsk: "Not registered? Register Employee", 
+                btnGuest: "Enter with Guest / Testing mode", regTitle: "Employee Registration", regEmail: "Your Google Email", 
+                regName: "Nickname", regRole: "Role / Position", btnSaveReg: "Save Employee Data", btnCancelReg: "Cancel / Back to Login",
+                onboardInfo: "It looks like you are not registered yet. Fill in the data below for the first time!",
+                verifiedEmailLabel: "Verified Email:", btnAvailable: "Available", btnBusy: "Busy", btnOff: "Set Leave / OFF", btnBusyTime: "Busy",
+                offTitle: "Leave / Sick / Holiday Settings", offDesc: "Description:", offOpt1: "OFF (Absent)", offOpt2: "Permit", offOpt3: "Sick", 
+                offOpt4: "Holiday / Leave", offStart: "From Date:", offEnd: "To Date:", btnApply: "Apply", modalBusyTitle: "Busy Hour Schedule", 
+                modalBusyAuto: "Auto Busy at:", btnSetBusy: "Set Busy Time", modalManualStatus: "Manual Status:", btnAvailManual: "Available", 
+                btnBusyManual: "Busy", btnDeleteAcc: "Delete Account (Resign)", confirmDelete: "Are you sure you want to permanently delete this account?", 
+                alertDeleted: "Account successfully deleted.", alertDuplicate: "Sorry, this name is already registered to another email.", btnUploadPhoto: "Choose from Gallery..."
+            },
+            de: {
+                loginDesc: "Verwenden Sie Ihr Google-Konto, um sich anzumelden", settings: "Einstellungen", myStatus: "Mein Status:", 
+                empList: "Mitarbeiterliste", btnReq: "Besprechung anfordern", btnMsg: "Nachricht senden", selRoom: "Besprechungsraum auswählen:", 
+                btnConf: "Bestätigen", btnSend: "Senden", emptyState: "Wählen Sie einen Mitarbeiter aus der Liste aus.", 
+                accProfile: "Kontoprofil", langPref: "Sprachpräferenz", btnLogout: "Abmelden", btnSaveProfile: "Änderungen speichern",
+                statusAvail: "Verfügbar", statusBusy: "Beschäftigt", statusOffline: "Offline (Inaktiv)", you: "(Du)", hi: "Hallo, ",
+                alertSelf: "Das ist dein eigenes Profil.", alertEmpty: "Name und Rolle dürfen nicht leer sein!", alertSaved: "Profil erfolgreich aktualisiert!", 
+                alertMeeting: "Besprechungsanfrage gesendet!", chatWith: "Chatten mit ", welcomeOnboard: "Hallo! Willkommen bei OfficeConnect!", 
+                askName: "Wie möchtest du genannt werden?", askRole: "Und was ist deine Rolle?", btnEnterWorkspace: "Arbeit beginnen",
+                customRoom: "Anderer Ort? Hier tippen...", alertNoRoom: "Bitte zuerst einen Raum auswählen oder eingeben!", chatPlaceholder: "Schreibe eine Nachricht...", 
+                notifTitle: "Benachrichtigungen", noNotif: "Noch keine Benachrichtigungen.", notifMsg: "hat eine neue Nachricht gesendet!", notifMeet: "hat zu einem Meeting eingeladen!", 
+                displayMode: "Anzeigemodus", searchEmp: "Mitarbeiter suchen...", chooseDevice: "Wählen Sie Ihre Geräteansicht vor dem Betreten", 
+                desktopBtn: "Desktop / Laptop", mobileBtn: "Handy / Mobile", orText: "ODER", btnRegisterAsk: "Nicht registriert? Mitarbeiter registrieren", 
+                btnGuest: "Mit Gast- / Testmodus eintreten", regTitle: "Mitarbeiterregistrierung", regEmail: "Ihre Google E-Mail", 
+                regName: "Spitzname", regRole: "Rolle / Position", btnSaveReg: "Mitarbeiterdaten speichern", btnCancelReg: "Abbrechen / Zurück",
+                onboardInfo: "Es sieht so aus, als wären Sie noch nicht registriert. Füllen Sie die untenstehenden Daten aus!",
+                verifiedEmailLabel: "Bestätigte E-Mail:", btnAvailable: "Verfügbar", btnBusy: "Beschäftigt", btnOff: "Urlaub / OFF", btnBusyTime: "Beschäftigt",
+                offTitle: "Urlaubs- / Krankheits- / Feiertagseinstellungen", offDesc: "Beschreibung:", offOpt1: "OFF (Abwesend)", offOpt2: "Erlaubnis", offOpt3: "Krank", 
+                offOpt4: "Urlaub / Feiertag", offStart: "Vom Datum:", offEnd: "Bis Datum:", btnApply: "Anwenden", modalBusyTitle: "Beschäftigt-Zeitplan", 
+                modalBusyAuto: "Automatisch beschäftigt um:", btnSetBusy: "Zeit einstellen", modalManualStatus: "Manueller Status:", btnAvailManual: "Verfügbar", 
+                btnBusyManual: "Beschäftigt", btnDeleteAcc: "Konto löschen (Kündigung)", confirmDelete: "Möchten Sie dieses Konto wirklich dauerhaft löschen?", 
+                alertDeleted: "Konto erfolgreich gelöscht.", alertDuplicate: "Entschuldigung, dieser Name ist bereits registriert.", btnUploadPhoto: "Aus Galerie wählen..."
+            },
+            ru: {
+                loginDesc: "Используйте свой аккаунт Google для входа", settings: "Настройки", myStatus: "Мой статус:", 
+                empList: "Список сотрудников", btnReq: "Запросить встречу", btnMsg: "Отправить сообщение", selRoom: "Выберите переговорную:", 
+                btnConf: "Подтвердить", btnSend: "Отправить", emptyState: "Выберите сотрудника из списка слева.", 
+                accProfile: "Профиль аккаунта", langPref: "Язык", btnLogout: "Выйти из аккаунта", btnSaveProfile: "Сохранить изменения",
+                statusAvail: "Доступен", statusBusy: "Занят", statusOffline: "Не в сети", you: "(Вы)", hi: "Привет, ",
+                alertSelf: "Это ваш собственный профиль.", alertEmpty: "Имя и должность не могут быть пустыми!", alertSaved: "Профиль успешно обновлен!", 
+                alertMeeting: "Запрос на встречу отправлен!", chatWith: "Чат с ", welcomeOnboard: "Привет! Добро пожаловать в OfficeConnect!", 
+                askName: "Как бы вы хотели, чтобы вас называли?", askRole: "Какая у вас должность?", btnEnterWorkspace: "Начать работу",
+                customRoom: "Другое место? Введите здесь...", alertNoRoom: "Сначала выберите или введите место!", chatPlaceholder: "Введите сообщение...", 
+                notifTitle: "Уведомления", noNotif: "Пока нет уведомлений.", notifMsg: "отправил новое сообщение!", notifMeet: "пригласил на встречу!", 
+                displayMode: "Режим отображения", searchEmp: "Поиск сотрудника...", chooseDevice: "Выберите вид устройства перед входом", 
+                desktopBtn: "ПК / Ноутбук", mobileBtn: "Мобильный / Телефон", orText: "ИЛИ", btnRegisterAsk: "Не зарегистрированы? Регистрация", 
+                btnGuest: "Войти в гостевом / тестовом режиме", regTitle: "Регистрация сотрудника", regEmail: "Ваш Google Email", 
+                regName: "Имя", regRole: "Должность", btnSaveReg: "Сохранить данные", btnCancelReg: "Отмена / Назад",
+                onboardInfo: "Похоже, вы еще не зарегистрированы. Заполните данные ниже!",
+                verifiedEmailLabel: "Подтвержденный Email:", btnAvailable: "Доступен", btnBusy: "Занят", btnOff: "Отпуск / ВЫКЛ", btnBusyTime: "Занят",
+                offTitle: "Настройки отпуска / больничного", offDesc: "Описание:", offOpt1: "ВЫКЛ (Отсутствует)", offOpt2: "Разрешение", offOpt3: "Болен", 
+                offOpt4: "Отпуск / Выходной", offStart: "С даты:", offEnd: "По дату:", btnApply: "Применить", modalBusyTitle: "Расписание занятости", 
+                modalBusyAuto: "Автоматически занят в:", btnSetBusy: "Установить время", modalManualStatus: "Ручной статус:", btnAvailManual: "Доступен", 
+                btnBusyManual: "Занят", btnDeleteAcc: "Удалить аккаунт (Увольнение)", confirmDelete: "Вы уверены, что хотите навсегда удалить этот аккаунт?", 
+                alertDeleted: "Аккаунт успешно удален.", alertDuplicate: "Извините, это имя уже зарегистрировано на другой email.", btnUploadPhoto: "Выбрать из галереи..."
+            }
+        };
+
+        // --- 3. DATABASE STATE & FUNGSI SINKRONISASI ---
+        let employeeDB = {};
+        let chatHistory = {};
+        let users = [];
+        let myStatus = "Available";
+        let activeUser = null;
+        let selectedRoom = null;
+        let unreadCounts = {}; 
+        let myEmailId = null; 
+        let tempEmail = ""; 
+        let busyStartTimeout = null; 
+        let busyTimeout = null; 
+        let offTimeout = null; 
+
+        // Fungsi Simpan Cerdas (Otomatis pilih Cloud Firebase atau LocalStorage)
+        function syncUsersDB() {
+            if (useFirebase) dbRef.ref('users').set(employeeDB);
+            else localStorage.setItem('officeConnect_db', JSON.stringify(employeeDB));
+        }
+
+        function syncChatsDB() {
+            if (useFirebase) dbRef.ref('chats').set(chatHistory);
+            else localStorage.setItem('officeConnect_chats', JSON.stringify(chatHistory));
+        }
+
+        // Listener Data (Membaca data masuk)
+        if (useFirebase) {
+            dbRef.ref('users').on('value', (snapshot) => {
+                employeeDB = snapshot.val() || {};
+                loadUsersFromDB();
+                renderUsers();
+                if(activeUser) viewProfile(activeUser.id);
+            });
+            dbRef.ref('chats').on('value', (snapshot) => {
+                chatHistory = snapshot.val() || {};
+                renderUsers(); 
+                if(activeUser) renderChat();
+            });
+        } else {
+            // Fallback Local Storage
+            employeeDB = JSON.parse(localStorage.getItem('officeConnect_db')) || {};
+            chatHistory = JSON.parse(localStorage.getItem('officeConnect_chats')) || {};
+            window.addEventListener('storage', function(e) {
+                if (e.key === 'officeConnect_db') {
+                    employeeDB = JSON.parse(e.newValue || '{}');
+                    loadUsersFromDB(); renderUsers(); if (activeUser) viewProfile(activeUser.id);
+                }
+                if (e.key === 'officeConnect_chats') {
+                    chatHistory = JSON.parse(e.newValue || '{}');
+                    renderUsers(); if (activeUser) renderChat();
+                }
+            });
+        }
+
+        function loadUsersFromDB() {
+            users = [];
+            const now = Date.now();
+            const ONE_DAY = 24 * 60 * 60 * 1000;
+
+            for (const [email, data] of Object.entries(employeeDB)) {
+                let currentStatus = data.status || "Available";
+                
+                if (data.lastLogin && (now - data.lastLogin > ONE_DAY)) {
+                    if (!['OFF', 'Izin', 'Sakit', 'Libur'].includes(currentStatus)) {
+                        currentStatus = "Offline (Tidak Aktif)";
+                        data.status = currentStatus;
+                    }
+                }
+
+                users.push({
+                    id: email, name: data.name, role: data.role, avatar: data.avatar || "",
+                    status: currentStatus, busySchedule: data.busySchedule || ""
+                });
+
+                if (!chatHistory[email]) chatHistory[email] = [];
+                if (unreadCounts[email] === undefined) unreadCounts[email] = 0;
+            }
+            if(!useFirebase) syncUsersDB();
+            
+            users.sort((a, b) => {
+                if (a.id === myEmailId) return -1;
+                if (b.id === myEmailId) return 1;
+                return 0;
+            });
+        }
+
+        function checkDuplicateName(name, excludeEmail) {
+            for (const [email, data] of Object.entries(employeeDB)) {
+                if (email !== excludeEmail && data.name.toLowerCase() === name.toLowerCase()) return true;
+            }
+            return false;
+        }
+
+        // --- 4. REGISTRASI & LOGIN ---
+        function toggleRegisterPanel() {
+            document.getElementById('login-section').classList.toggle('hidden');
+            document.getElementById('register-section').classList.toggle('hidden');
+        }
+
+        function saveRegistration() {
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const name = document.getElementById('reg-name').value.trim();
+            const role = document.getElementById('reg-role').value.trim();
+            const words = dictionary[document.getElementById('lang-select').value];
+
+            if(!email || !name || !role) { alert(words.alertEmpty); return; }
+            if(checkDuplicateName(name, email)) { alert(words.alertDuplicate); return; }
+
+            employeeDB[email] = { name: name, role: role, avatar: "", status: "Available", lastLogin: Date.now() };
+            syncUsersDB();
+            alert("Pendaftaran berhasil! Sekarang kamu bisa masuk dengan menekan tombol 'Login dengan Google'.");
+            toggleRegisterPanel();
+            document.getElementById('reg-email').value = ""; document.getElementById('reg-name').value = ""; document.getElementById('reg-role').value = "";
+        }
+
+        function handleGoogleCredentialResponse(response) {
+            const payload = decodeJwtResponse(response.credential);
+            const email = payload.email.toLowerCase();
+            tempEmail = email;
+
+            if(employeeDB[email]) {
+                const userData = employeeDB[email];
+                alert("Selamat datang " + userData.name + "!");
+                setupProfileDirectly(userData.name, userData.role, email, userData.avatar);
+            } else {
+                const givenName = payload.given_name || payload.name;
+                document.getElementById('verified-email-text').innerText = tempEmail;
+                if(givenName && !checkDuplicateName(givenName, tempEmail)) document.getElementById('onboard-name-input').value = givenName;
+                fadeOut('login-screen', () => {
+                    const onboard = document.getElementById('onboarding-screen');
+                    onboard.classList.remove('hidden');
+                    setTimeout(() => { onboard.classList.remove('opacity-0'); document.getElementById('onboard-role-input').focus(); }, 10);
+                });
+                changeLanguage(); 
+            }
+        }
+
+        function decodeJwtResponse(token) {
+            var base64Url = token.split('.')[1];
+            var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+
+        function mockGoogleLogin() {
+            const email = "noah.admin@office.com";
+            tempEmail = email;
+            if(employeeDB[email]) {
+                const userData = employeeDB[email];
+                alert("Selamat datang " + userData.name + "!");
+                setupProfileDirectly(userData.name, userData.role, email, userData.avatar);
+            } else {
+                document.getElementById('verified-email-text').innerText = tempEmail;
+                fadeOut('login-screen', () => {
+                    const onboard = document.getElementById('onboarding-screen');
+                    onboard.classList.remove('hidden');
+                    setTimeout(() => { onboard.classList.remove('opacity-0'); document.getElementById('onboard-name-input').focus(); }, 10);
+                });
+                changeLanguage();
+            }
+        }
+
+        function setupProfileDirectly(name, role, email, avatarUrl = "") {
+            myEmailId = email; 
+            if(!employeeDB[email]) employeeDB[email] = {};
+            employeeDB[email].lastLogin = Date.now();
+            employeeDB[email].status = myStatus; 
+            syncUsersDB();
+            loadUsersFromDB();
+
+            document.getElementById('edit-name-input').value = name;
+            document.getElementById('edit-role-input').value = role;
+            document.getElementById('modal-display-email').innerText = email;
+            updateAvatarUI('modal-avatar', name, avatarUrl);
+
+            fadeOut('login-screen', () => {
+                fadeIn('main-app');
+                document.body.classList.remove('bg-indigo-50', 'bg-indigo-50/95');
+                document.body.classList.add('bg-gray-50');
+            });
+            changeLanguage(); 
+        }
+
+        function finishOnboarding() {
+            let inputName = document.getElementById('onboard-name-input').value.trim();
+            let inputRole = document.getElementById('onboard-role-input').value.trim();
+            const words = dictionary[document.getElementById('lang-select').value];
+
+            if(!inputName || !inputRole) { alert(words.alertEmpty); return; }
+            if(checkDuplicateName(inputName, tempEmail)) { alert(words.alertDuplicate); return; }
+
+            employeeDB[tempEmail] = { name: inputName, role: inputRole, avatar: "", status: "Available", lastLogin: Date.now() };
+            syncUsersDB();
+            myEmailId = tempEmail; 
+            loadUsersFromDB();
+
+            document.getElementById('edit-name-input').value = inputName;
+            document.getElementById('edit-role-input').value = inputRole;
+            document.getElementById('modal-display-email').innerText = tempEmail;
+            updateAvatarUI('modal-avatar', inputName, "");
+
+            const onboard = document.getElementById('onboarding-screen');
+            onboard.classList.add('opacity-0');
+            setTimeout(() => {
+                onboard.classList.add('hidden');
+                fadeIn('main-app');
+                document.body.classList.remove('bg-indigo-50', 'bg-indigo-50/95');
+                document.body.classList.add('bg-gray-50');
+            }, 500);
+            changeLanguage(); 
+        }
+
+        // --- 5. UTILITIES PROFIL & AVATAR ---
+        function updateAvatarUI(elementId, name, avatarUrl) {
+            const el = document.getElementById(elementId);
+            if(avatarUrl) el.innerHTML = `<img src="${avatarUrl}" class="w-full h-full avatar-img" onerror="this.onerror=null; this.parentNode.innerHTML='${name.charAt(0)}';">`;
+            else el.innerHTML = name.charAt(0);
+        }
+        function getAvatarHTML(name, avatarUrl) {
+            if(avatarUrl) return `<img src="${avatarUrl}" class="w-full h-full avatar-img" onerror="this.onerror=null; this.parentNode.innerHTML='${name.charAt(0)}';">`;
+            return name.charAt(0);
+        }
+
+        function previewFileName() {
+            const fileInput = document.getElementById('edit-avatar-input');
+            const previewText = document.getElementById('file-name-preview');
+            if(fileInput.files && fileInput.files[0]) {
+                previewText.innerText = "File terpilih: " + fileInput.files[0].name;
+                previewText.classList.remove('hidden');
+            } else { previewText.classList.add('hidden'); }
+        }
+
+        function updateProfile() {
+            const newName = document.getElementById('edit-name-input').value.trim();
+            const newRole = document.getElementById('edit-role-input').value.trim();
+            const fileInput = document.getElementById('edit-avatar-input');
+            const words = dictionary[document.getElementById('lang-select').value];
+            
+            if(newName === "" || newRole === "") { alert(words.alertEmpty); return; }
+            if(checkDuplicateName(newName, myEmailId)) { alert(words.alertDuplicate); return; }
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) { saveProfileDataToDB(newName, newRole, e.target.result, words); };
+                reader.readAsDataURL(fileInput.files[0]); 
+            } else {
+                const existingAvatar = employeeDB[myEmailId] ? employeeDB[myEmailId].avatar : "";
+                saveProfileDataToDB(newName, newRole, existingAvatar, words);
+            }
+        }
+
+        function saveProfileDataToDB(newName, newRole, avatarData, words) {
+            if(myEmailId && employeeDB[myEmailId]) {
+                employeeDB[myEmailId].name = newName;
+                employeeDB[myEmailId].role = newRole;
+                employeeDB[myEmailId].avatar = avatarData;
+                syncUsersDB();
+            }
+            loadUsersFromDB();
+            updateAvatarUI('modal-avatar', newName, avatarData);
+            changeLanguage(); 
+            alert(words.alertSaved);
+            document.getElementById('edit-avatar-input').value = ""; document.getElementById('file-name-preview').classList.add('hidden');
+        }
+
+        // --- 6. LOGIKA STATUS & JADWAL ---
+        function openBusyTime() { document.getElementById('btn-sibuk-trigger').classList.add('hidden'); document.getElementById('busy-time-wrapper').classList.remove('hidden'); }
+        function closeBusyTime() { document.getElementById('busy-time-wrapper').classList.add('hidden'); document.getElementById('btn-sibuk-trigger').classList.remove('hidden'); }
+
+        function setSpecificStatus(mode) {
+            myStatus = mode;
+            if(myEmailId && employeeDB[myEmailId]) {
+                employeeDB[myEmailId].status = myStatus;
+                employeeDB[myEmailId].busySchedule = "";
+                employeeDB[myEmailId].lastLogin = Date.now();
+                syncUsersDB();
+            }
+            loadUsersFromDB();
+            clearTimeout(busyStartTimeout); clearTimeout(busyTimeout); clearTimeout(offTimeout); 
+            changeLanguage(); 
+            if (mode === 'Available') closeBusyTime();
+        }
+
+        function setFastHourlySchedule() {
+            const startStr = document.getElementById('fast-start-time').value;
+            const endStr = document.getElementById('fast-end-time').value;
+            if (!startStr || !endStr) { setSpecificStatus('Busy'); return; }
+            executeHourlySchedule(startStr, endStr);
+        }
+
+        function setHourlySchedule() {
+            const startStr = document.getElementById('start-time').value;
+            const endStr = document.getElementById('end-time').value;
+            if (!startStr || !endStr) { alert("Mohon isi jam mulai dan selesai terlebih dahulu, ya."); return; }
+            executeHourlySchedule(startStr, endStr);
+        }
+
+        function executeHourlySchedule(startStr, endStr) {
+            const now = new Date();
+            const [startHour, startMin] = startStr.split(':');
+            const [endHour, endMin] = endStr.split(':');
+
+            let startTime = new Date(); startTime.setHours(parseInt(startHour), parseInt(startMin), 0, 0);
+            let endTime = new Date(); endTime.setHours(parseInt(endHour), parseInt(endMin), 0, 0);
+
+            if (endTime < startTime) endTime.setDate(endTime.getDate() + 1);
+            if (now > endTime) { startTime.setDate(startTime.getDate() + 1); endTime.setDate(endTime.getDate() + 1); }
+
+            clearTimeout(busyStartTimeout); clearTimeout(busyTimeout); clearTimeout(offTimeout);
+
+            if (now >= startTime && now < endTime) {
+                myStatus = "Busy";
+                if(myEmailId && employeeDB[myEmailId]) {
+                    employeeDB[myEmailId].status = myStatus; employeeDB[myEmailId].busySchedule = `${startStr} - ${endStr}`;
+                    syncUsersDB();
+                }
+                loadUsersFromDB(); changeLanguage();
+                alert(`Status SIBUK dimulai sekarang hingga jam ${endStr}.`);
+
+                busyTimeout = setTimeout(() => { setSpecificStatus("Available"); alert("Jadwal sibukmu sudah selesai, statusmu kembali Tersedia!"); }, endTime.getTime() - now.getTime());
+            } else {
+                if(myEmailId && employeeDB[myEmailId]) {
+                    employeeDB[myEmailId].busySchedule = `(Akan sibuk jam ${startStr})`; syncUsersDB();
+                }
+                loadUsersFromDB(); changeLanguage();
+                alert(`Jadwal tersimpan! Statusmu otomatis SIBUK pada jam ${startStr}.`);
+
+                busyStartTimeout = setTimeout(() => {
+                    myStatus = "Busy";
+                    if(myEmailId && employeeDB[myEmailId]) { employeeDB[myEmailId].status = myStatus; employeeDB[myEmailId].busySchedule = `${startStr} - ${endStr}`; syncUsersDB(); }
+                    loadUsersFromDB(); changeLanguage();
+                }, startTime.getTime() - now.getTime());
+
+                busyTimeout = setTimeout(() => { setSpecificStatus("Available"); alert("Jadwal sibukmu sudah selesai, statusmu kembali Tersedia!"); }, endTime.getTime() - now.getTime());
+            }
+        }
+
+        function toggleOffPanel() { document.getElementById('off-panel').classList.toggle('hidden'); }
+
+        function setOffSchedule() {
+            const type = document.getElementById('off-type').value;
+            const startDate = document.getElementById('off-start-date').value;
+            const endDate = document.getElementById('off-end-date').value;
+
+            if (!startDate || !endDate) { alert("Mohon isi tanggal mulai dan selesai terlebih dahulu, ya."); return; }
+
+            const start = new Date(startDate); const end = new Date(endDate); end.setHours(23, 59, 59, 999);
+            const now = new Date();
+
+            if (end < now) { alert("Tanggal selesai tidak boleh di masa lalu, ya."); return; }
+
+            myStatus = type;
+            if(myEmailId && employeeDB[myEmailId]) {
+                employeeDB[myEmailId].status = myStatus; employeeDB[myEmailId].busySchedule = `${formatDate(start)} - ${formatDate(end)}`;
+                syncUsersDB();
+            }
+            loadUsersFromDB(); changeLanguage();
+            
+            alert(`Status berhasil diubah menjadi ${type} dari tanggal ${formatDate(start)} hingga ${formatDate(end)}.`);
+            toggleOffPanel(); closeBusyTime();
+
+            clearTimeout(busyStartTimeout); clearTimeout(busyTimeout); clearTimeout(offTimeout); 
+            offTimeout = setTimeout(() => { setSpecificStatus("Available"); alert(`Jadwal ${type} sudah selesai, statusmu kembali Tersedia!`); }, end.getTime() - now.getTime());
+        }
+
+        function formatDate(dateObj) {
+            const day = ("0" + dateObj.getDate()).slice(-2); const month = ("0" + (dateObj.getMonth() + 1)).slice(-2);
+            return `${day}/${month}`;
+        }
+
+        // --- 7. TAMPILAN & NAVIGASI ---
+        function selectDevice(mode) {
+            switchViewMode(mode);
+            fadeOut('device-screen', () => {
+                const loginScreen = document.getElementById('login-screen'); loginScreen.classList.remove('hidden');
+                setTimeout(() => { loginScreen.classList.remove('opacity-0', 'translate-y-4', 'scale-95'); loginScreen.classList.add('opacity-100', 'translate-y-0', 'scale-100'); }, 10);
+            });
+        }
+
+        function switchViewMode(mode) {
+            const mainApp = document.getElementById('main-app');
+            if(mode === 'mobile') mainApp.classList.add('mobile-mode'); else mainApp.classList.remove('mobile-mode');
+        }
+
+        function toggleNotifPanel() { document.getElementById('notif-panel').classList.toggle('hidden'); }
+        function fadeOut(elementId, callback) {
+            const el = document.getElementById(elementId);
+            el.classList.remove('opacity-100', 'translate-y-0', 'scale-100'); el.classList.add('opacity-0', 'translate-y-4', 'scale-95');
+            setTimeout(() => { el.classList.add('hidden'); if(callback) callback(); }, 300);
+        }
+        function fadeIn(elementId) {
+            const el = document.getElementById(elementId); el.classList.remove('hidden');
+            setTimeout(() => { el.classList.remove('opacity-0', 'translate-y-4', 'scale-95'); el.classList.add('opacity-100', 'translate-y-0', 'scale-100'); }, 10);
+        }
+
+        function changeLanguage() {
+            const lang = document.getElementById('lang-select').value; const words = dictionary[lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if(words[key]) el.innerText = words[key]; });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { const key = el.getAttribute('data-i18n-placeholder'); if(words[key]) el.placeholder = words[key]; });
+
+            if (myEmailId && users.find(u => u.id === myEmailId)) {
+                const myUser = users.find(u => u.id === myEmailId);
+                document.getElementById('display-name').innerText = words.hi + myUser.name;
+                document.getElementById('display-role').innerText = "(" + myUser.role + ")"; 
+                
+                let displayStatusForHeader = "";
+                if(myStatus === "Available") displayStatusForHeader = words.statusAvail;
+                else if(myStatus === "Busy") { displayStatusForHeader = words.statusBusy; if (myUser.busySchedule) displayStatusForHeader += ` ${myUser.busySchedule}`; }
+                else if (['OFF', 'Izin', 'Sakit', 'Libur', 'DND'].includes(myStatus)) {
+                    if(myStatus === 'OFF') displayStatusForHeader = words.offOpt1; else if(myStatus === 'Izin') displayStatusForHeader = words.offOpt2;
+                    else if(myStatus === 'Sakit') displayStatusForHeader = words.offOpt3; else if(myStatus === 'Libur') displayStatusForHeader = words.offOpt4;
+                    if (myUser.busySchedule) displayStatusForHeader += ` (${myUser.busySchedule})`;
+                } else if (myStatus === "Offline (Tidak Aktif)") displayStatusForHeader = words.statusOffline;
+                
+                document.getElementById('my-status').innerText = displayStatusForHeader;
+            }
+            renderUsers(); if (activeUser) viewProfile(activeUser.id);
+        }
+
+        function renderUsers() {
+            if (!document.getElementById('lang-select')) return;
+            const words = dictionary[document.getElementById('lang-select').value];
+            const searchInput = document.getElementById('search-user-input');
+            const searchQuery = searchInput ? searchInput.value.toLowerCase() : "";
+            
+            const filteredUsers = users.filter(u => u.name.toLowerCase().includes(searchQuery) || u.role.toLowerCase().includes(searchQuery));
+
+            document.getElementById('user-list').innerHTML = filteredUsers.map(u => {
+                const displayName = u.id === myEmailId ? `${u.name} ${words.you}` : u.name;
+                let displayStatus = ""; let statusColor = "";
+                
+                if (u.status === 'Available') {
+                    if (u.busySchedule) { displayStatus = `${words.statusAvail} ${u.busySchedule}`; statusColor = 'bg-blue-50 text-blue-600 border border-blue-100'; } 
+                    else { displayStatus = words.statusAvail; statusColor = 'bg-emerald-50 text-emerald-600 border border-emerald-100'; }
+                } else if (u.status === 'Busy') {
+                    displayStatus = words.statusBusy; statusColor = 'bg-red-50 text-red-600 border border-red-100';
+                    if (u.busySchedule) displayStatus += ` (${u.busySchedule})`;
+                } else if (['OFF', 'Izin', 'Sakit', 'Libur', 'DND'].includes(u.status)) {
+                    if(u.status === 'OFF') displayStatus = words.offOpt1; else if(u.status === 'Izin') displayStatus = words.offOpt2;
+                    else if(u.status === 'Sakit') displayStatus = words.offOpt3; else if(u.status === 'Libur') displayStatus = words.offOpt4;
+                    statusColor = 'bg-gray-100 text-gray-600 border border-gray-300';
+                    if (u.status === 'DND') statusColor = 'bg-orange-50 text-orange-600 border border-orange-100'; 
+                    if (u.busySchedule) displayStatus += ` (${u.busySchedule})`;
+                } else if (u.status === 'Offline (Tidak Aktif)') {
+                    displayStatus = words.statusOffline; statusColor = 'bg-gray-200 text-gray-500 border border-gray-300';
+                }
+
+                return `
+                <div class="relative p-4 bg-white border border-gray-100 rounded-2xl cursor-pointer hover:shadow-lg hover:border-indigo-200 transition-all duration-300 transform hover:-translate-y-1 mb-3 group flex items-center gap-4" onclick="viewProfile('${u.id}')">
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-xl uppercase shrink-0 shadow-inner overflow-hidden">
+                        ${getAvatarHTML(u.name, u.avatar)}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <div><p class="font-bold text-gray-800 group-hover:text-indigo-600 transition-colors">${displayName}</p><p class="text-xs text-gray-500 mt-0.5">${u.role}</p></div>
+                        </div>
+                        <div class="mt-2 inline-block"><span class="text-[10px] uppercase px-2.5 py-1 rounded-lg font-bold tracking-wide ${statusColor}">${displayStatus}</span></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function hideAllPanels() {
+            document.getElementById('empty-state').classList.add('hidden'); document.getElementById('profile-panel').classList.add('hidden');
+            document.getElementById('map-panel').classList.add('hidden'); document.getElementById('chat-panel').classList.add('hidden');
+            document.getElementById('profile-panel').classList.remove('animate-panel'); document.getElementById('map-panel').classList.remove('animate-panel');
+            document.getElementById('chat-panel').classList.remove('animate-panel');
+        }
+
+        function triggerPanelAnimation(panelId) {
+            const panel = document.getElementById(panelId); panel.classList.remove('hidden');
+            setTimeout(() => { panel.classList.add('animate-panel'); }, 10);
+        }
+
+        function viewProfile(id) {
+            activeUser = users.find(u => u.id === id);
+            const words = dictionary[document.getElementById('lang-select').value];
+            if (!activeUser) return;
+            if(id === myEmailId && event && event.type === 'click') { alert(words.alertSelf); }
+
+            hideAllPanels();
+            const displayName = activeUser.id === myEmailId ? `${activeUser.name} ${words.you}` : activeUser.name;
+            
+            let displayStatus = "";
+            if (activeUser.status === 'Available') {
+                if(activeUser.busySchedule) displayStatus = `${words.statusAvail} ${activeUser.busySchedule}`; else displayStatus = words.statusAvail;
+            } else if (activeUser.status === 'Busy') {
+                displayStatus = words.statusBusy; if (activeUser.busySchedule) displayStatus += ` (${activeUser.busySchedule})`;
+            } else if (['OFF', 'Izin', 'Sakit', 'Libur', 'DND'].includes(activeUser.status)) {
+                if(activeUser.status === 'OFF') displayStatus = words.offOpt1; else if(activeUser.status === 'Izin') displayStatus = words.offOpt2;
+                else if(activeUser.status === 'Sakit') displayStatus = words.offOpt3; else if(activeUser.status === 'Libur') displayStatus = words.offOpt4;
+                if (activeUser.busySchedule) displayStatus += ` (${activeUser.busySchedule})`;
+            } else if (activeUser.status === 'Offline (Tidak Aktif)') { displayStatus = words.statusOffline; }
+
+            document.getElementById('profile-name').innerText = displayName;
+            document.getElementById('profile-role').innerText = activeUser.role;
+            document.getElementById('profile-status').innerText = words.myStatus + " " + displayStatus;
+            document.getElementById('chat-with').innerText = words.chatWith + activeUser.name;
+            updateAvatarUI('view-profile-avatar', activeUser.name, activeUser.avatar);
+            
+            triggerPanelAnimation('profile-panel');
+        }
+
+        // --- 8. CHAT & MEETING ---
+        function openMeetingPanel() {
+            if (activeUser.status === "Busy" || ['OFF', 'Izin', 'Sakit', 'Libur', 'DND', 'Offline (Tidak Aktif)'].includes(activeUser.status)) { alert("Pengguna ini sedang tidak tersedia untuk meeting."); return; }
+            hideAllPanels(); document.querySelectorAll('.room').forEach(r => r.classList.remove('selected')); selectedRoom = null; document.getElementById('custom-room-input').value = "";
+            triggerPanelAnimation('map-panel');
+        }
+
+        function openChatPanel() {
+            if (['OFF', 'Izin', 'Sakit', 'Libur', 'DND', 'Offline (Tidak Aktif)'].includes(activeUser.status)) alert(`Pengguna ini sedang ${activeUser.status}, kemungkinan pesan akan dibalas nanti.`);
+            hideAllPanels(); triggerPanelAnimation('chat-panel'); renderChat();
+        }
+
+        // LOGIKA PEMISAH TANGGAL & WAKTU
+        function formatChatDate(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            
+            const isToday = date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+            
+            const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+            const isYesterday = date.getDate() === yesterday.getDate() && date.getMonth() === yesterday.getMonth() && date.getFullYear() === yesterday.getFullYear();
+
+            if (isToday) return "HARI INI";
+            if (isYesterday) return "KEMARIN";
+            
+            const day = ("0" + date.getDate()).slice(-2);
+            const month = ("0" + (date.getMonth() + 1)).slice(-2);
+            return `${day}/${month}/${date.getFullYear()}`;
+        }
+
+        function renderChat() {
+            const box = document.getElementById('message-box');
+            if(!chatHistory[myEmailId]) chatHistory[myEmailId] = [];
+            
+            let myChats = chatHistory[myEmailId].filter(m => m.to === activeUser.id || m.from === activeUser.id);
+            let lastDate = null;
+            
+            box.innerHTML = myChats.map(msg => {
+                const msgDateStr = formatChatDate(msg.timestamp);
+                const timeStr = new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                
+                let dateSeparator = "";
+                if (msgDateStr !== lastDate) {
+                    dateSeparator = `
+                    <div class="flex items-center justify-center my-6">
+                        <div class="h-px bg-gray-200 flex-1"></div>
+                        <span class="px-4 py-1.5 bg-gray-100 rounded-full text-[10px] font-bold text-gray-500 mx-3 tracking-wider shadow-sm">${msgDateStr}</span>
+                        <div class="h-px bg-gray-200 flex-1"></div>
+                    </div>`;
+                    lastDate = msgDateStr;
+                }
+
+                if(msg.from === myEmailId) {
+                    return `${dateSeparator}
+                    <div class="flex flex-col items-end mb-3 animate-msg">
+                        <div class="bg-indigo-600 text-white p-3.5 rounded-2xl rounded-tr-sm shadow-md text-sm max-w-[80%]">${msg.text}</div>
+                        <span class="text-[9px] text-gray-400 mt-1 mr-1 font-medium">${timeStr}</span>
+                    </div>`;
+                } else {
+                    return `${dateSeparator}
+                    <div class="flex flex-col items-start mb-3 animate-msg">
+                        <div class="bg-white border border-gray-200 p-3.5 rounded-2xl rounded-tl-sm shadow-md text-sm text-gray-800 max-w-[80%]">${msg.text}</div>
+                        <span class="text-[9px] text-gray-400 mt-1 ml-1 font-medium">${timeStr}</span>
+                    </div>`;
+                }
+            }).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chat-input');
+            if (input.value.trim() === "") return;
+            
+            const newMsg = { text: input.value, from: myEmailId, to: activeUser.id, timestamp: Date.now() };
+            
+            if(!chatHistory[myEmailId]) chatHistory[myEmailId] = [];
+            chatHistory[myEmailId].push(newMsg);
+
+            if(!chatHistory[activeUser.id]) chatHistory[activeUser.id] = [];
+            chatHistory[activeUser.id].push(newMsg);
+
+            syncChatsDB();
+            input.value = ""; renderChat();
+        }
+
+        function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+        function selectRoom(el) { document.querySelectorAll('.room').forEach(r => r.classList.remove('selected')); el.classList.add('selected'); selectedRoom = el.innerText; document.getElementById('custom-room-input').value = ""; }
+        function handleCustomRoomInput() { document.querySelectorAll('.room').forEach(r => r.classList.remove('selected')); selectedRoom = null; }
+
+        function confirmMeeting() {
+            const customRoomInput = document.getElementById('custom-room-input').value.trim();
+            const finalRoom = customRoomInput !== "" ? customRoomInput : selectedRoom;
+            const words = dictionary[document.getElementById('lang-select').value];
+
+            if(!finalRoom) { alert(words.alertNoRoom); return; }
+            
+            const newMsg = { text: `*🤝 Undangan Meeting: ${finalRoom}*`, from: myEmailId, to: activeUser.id, timestamp: Date.now() };
+            if(!chatHistory[myEmailId]) chatHistory[myEmailId] = []; chatHistory[myEmailId].push(newMsg);
+            if(!chatHistory[activeUser.id]) chatHistory[activeUser.id] = []; chatHistory[activeUser.id].push(newMsg);
+            syncChatsDB();
+
+            alert(words.alertMeeting); hideAllPanels(); triggerPanelAnimation('profile-panel');
+        }
+
+        // --- 9. PENGATURAN & LOGOUT ---
+        function openSettings() { const modal = document.getElementById('settings-modal'); const box = document.getElementById('settings-box'); modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); box.classList.remove('scale-95', 'opacity-0'); }, 10); }
+        function closeSettings() { const modal = document.getElementById('settings-modal'); const box = document.getElementById('settings-box'); modal.classList.add('opacity-0'); box.classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300); }
+
+        function logoutApp() {
+            closeSettings(); myEmailId = null; tempEmail = "";
+            clearTimeout(busyStartTimeout); clearTimeout(busyTimeout); clearTimeout(offTimeout); 
+            document.getElementById('onboard-name-input').value = ""; document.getElementById('onboard-role-input').value = "";
+            fadeOut('main-app', () => {
+                fadeIn('device-screen'); document.body.classList.remove('bg-gray-50'); document.body.classList.add('bg-indigo-50');
+                hideAllPanels(); document.getElementById('empty-state').classList.remove('hidden');
+            });
+        }
+
+        function deleteAccount() {
+            const words = dictionary[document.getElementById('lang-select').value];
+            if (confirm(words.confirmDelete)) {
+                if (myEmailId && employeeDB[myEmailId]) { delete employeeDB[myEmailId]; syncUsersDB(); }
+                alert(words.alertDeleted); logoutApp();
+            }
+        }
+
+        // Initialize
+        if(!useFirebase) loadUsersFromDB();
+        changeLanguage();
+    </script>
+</body>
+</html>

@@ -35,18 +35,31 @@
         @keyframes modalScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         .animate-modal { animation: modalScale 0.3s ease-out forwards; }
 
-        /* TAMPILAN RESPONSIVE MOBILE */
-        .mobile-mode { max-width: 480px !important; margin: 0 auto !important; padding: 10px !important; }
+        /* Pop-up Toast Notification */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: white; border-left: 4px solid #4f46e5; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); padding: 15px 20px; border-radius: 8px; font-size: 14px; color: #374151; animation: slideUpFade 0.3s ease-out forwards; max-width: 300px; }
+        .toast.closing { animation: fadeOutRight 0.3s ease-in forwards; }
+        @keyframes fadeOutRight { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+
+        /* TAMPILAN RESPONSIVE MOBILE - DIPERBAIKI */
+        .mobile-mode { max-width: 100% !important; margin: 0 auto !important; padding: 10px !important; overflow-x: hidden; }
         .mobile-mode .flex-layout { flex-direction: column !important; gap: 1rem !important; }
         .mobile-mode .w-1-3 { width: 100% !important; padding-right: 0 !important; border-right: none !important; max-height: none; overflow-y: visible; }
         .mobile-mode #user-list { max-height: 250px; overflow-y: auto; border-bottom: 2px dashed #e5e7eb; padding-bottom: 1rem; margin-bottom: 1rem; }
         .mobile-mode .w-2-3 { width: 100% !important; padding-left: 0 !important; }
-        .mobile-mode .header-layout { flex-direction: column !important; text-align: center !important; gap: 1rem; }
-        .mobile-mode .header-layout > div { flex-direction: column !important; width: 100% !important; justify-content: center !important; gap: 1rem !important;}
-        .mobile-mode .header-layout img { margin: 0 auto; height: 120px !important; } 
+        
+        /* Perbaikan Header Mobile agar tidak bertumpuk */
+        .mobile-mode .header-layout { flex-direction: column !important; align-items: stretch !important; text-align: center !important; gap: 1rem; }
+        .mobile-mode .header-layout img { margin: 0 auto; height: 80px !important; width: auto; } /* Ukuran logo disesuaikan */
+        .mobile-mode .header-layout .flex.items-center.gap-4 { flex-direction: column; width: 100%; justify-content: center; gap: 0.75rem; }
         .mobile-mode .text-right { text-align: center !important; margin-right: 0 !important; }
-        .mobile-mode #notif-panel { right: auto !important; left: 50% !important; transform: translateX(-50%) !important; width: 300px !important; z-index: 70;}
+        .mobile-mode .relative.flex-1 { display: flex; justify-content: center; width: 100%; }
+        
+        /* Perbaikan Posisi Panel Notifikasi di Mobile */
+        .mobile-mode #notif-panel { right: 50% !important; left: 50% !important; transform: translateX(-50%) !important; width: 90vw !important; max-width: 320px; z-index: 70; top: 100%; mt-2; }
+        
         .mobile-mode #chat-panel { height: 28rem; }
+        .mobile-mode .flex-wrap { justify-content: center; } /* Memusatkan tombol status */
         
         .avatar-img { object-fit: cover; border-radius: 50%; }
         
@@ -56,6 +69,8 @@
     </style>
 </head>
 <body class="bg-indigo-50 p-6 font-sans relative min-h-screen flex flex-col justify-center overflow-x-hidden">
+
+    <div id="toast-container"></div>
 
     <!-- LAYAR PEMILIHAN PERANGKAT -->
     <div id="device-screen" class="fixed inset-0 z-[60] bg-indigo-50 flex flex-col items-center justify-center transition-opacity duration-700">
@@ -83,7 +98,7 @@
             <div id="login-section" class="transition-all duration-300">
                 <p class="text-gray-500 mb-8 text-sm mt-[-10px]" data-i18n="loginDesc">Gunakan akun Google-mu untuk masuk</p>
                 <div class="flex justify-center mb-4">
-                    <div id="g_id_onload" data-client_id="981090657032-ka0nqujtueiebi6pou2k4ahduc4c1a95.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleCredentialResponse" data-auto_prompt="false"></div>
+                    <div id="g_id_onload" data-client_id="981090657032-kvnofvbcq2ki8s0ai9huf5cd6j94n3v4.apps.googleusercontent.com" data-context="signin" data-ux_mode="popup" data-callback="handleGoogleCredentialResponse" data-auto_prompt="false"></div>
                     <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-logo_alignment="left"></div>
                 </div>
                 <div class="my-5 flex items-center gap-2">
@@ -133,15 +148,15 @@
     <!-- APLIKASI UTAMA -->
     <div id="main-app" class="hidden max-w-5xl w-full mx-auto bg-white p-6 rounded-2xl shadow-xl transition-all duration-700 opacity-0 transform translate-y-4 relative z-10">
         
-        <!-- HEADER LAYOUT DENGAN LOGO 200px -->
+        <!-- HEADER LAYOUT -->
         <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-5 header-layout">
-            <img src="logo.png" alt="OfficeConnect Logo" style="height: 200px; width: auto;" class="object-contain cursor-pointer shrink-0" onerror="this.src='https://via.placeholder.com/200x80?text=OfficeConnect'">
+            <img src="logo.png" alt="OfficeConnect Logo" style="height: 120px; width: auto;" class="object-contain cursor-pointer shrink-0" onerror="this.src='https://via.placeholder.com/200x80?text=OfficeConnect'">
             <div class="flex items-center gap-4">
                 <div class="text-right mr-2 flex flex-col justify-center">
                     <p id="display-name" class="font-extrabold text-gray-900 text-xl tracking-tight leading-tight"></p>
                     <p id="display-role" class="text-sm font-bold text-indigo-500 leading-tight mt-0.5"></p>
                 </div>
-                <div class="relative">
+                <div class="relative flex-1">
                     <button onclick="toggleNotifPanel()" class="p-3 bg-white border-2 border-gray-100 rounded-xl hover:bg-gray-50 transition-all relative shadow-sm">
                         🔔<span id="notif-badge-top" class="absolute -top-2 -right-2 bg-red-500 text-white text-[11px] font-bold w-6 h-6 flex items-center justify-center rounded-full hidden badge-pop border-2 border-white shadow-sm">0</span>
                     </button>
@@ -163,11 +178,11 @@
         <!-- STATUS PRIBADI -->
         <div class="mb-8 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-100 shadow-sm overflow-hidden">
             <div class="p-5 flex justify-between items-center flex-wrap gap-4">
-                <p class="text-gray-700"><span data-i18n="myStatus" class="font-medium">Status Saya:</span> <span id="my-status" class="font-bold text-indigo-700 ml-1">Available</span></p>
-                <div class="flex flex-wrap items-center gap-2">
+                <p class="text-gray-700 w-full text-center sm:text-left sm:w-auto"><span data-i18n="myStatus" class="font-medium">Status Saya:</span> <span id="my-status" class="font-bold text-indigo-700 ml-1">Available</span></p>
+                <div class="flex flex-wrap items-center gap-2 justify-center sm:justify-end w-full sm:w-auto">
                     <button onclick="setSpecificStatus('Available')" class="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-all shadow-md" data-i18n="btnAvailable">Tersedia</button>
                     <button id="btn-sibuk-trigger" onclick="openBusyTime()" class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-all shadow-md" data-i18n="btnBusy">Sibuk</button>
-                    <div id="busy-time-wrapper" class="hidden flex gap-1 items-center bg-white border border-gray-200 rounded-lg p-1 shadow-sm transition-all duration-300">
+                    <div id="busy-time-wrapper" class="hidden flex gap-1 items-center bg-white border border-gray-200 rounded-lg p-1 shadow-sm transition-all duration-300 flex-wrap justify-center">
                         <input type="time" id="fast-start-time" class="text-xs border-none focus:outline-none p-1 w-20 bg-transparent text-gray-700 font-medium">
                         <span class="text-gray-400 font-bold">-</span>
                         <input type="time" id="fast-end-time" class="text-xs border-none focus:outline-none p-1 w-20 bg-transparent text-gray-700 font-medium">
@@ -270,18 +285,8 @@
             </div>
 
             <div class="mb-6 border-b border-gray-100 pb-6">
-                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="modalBusyTitle">Jadwal Jam Sibuk (Modal)</p>
+                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="modalManualStatus">Status Manual:</p>
                 <div class="bg-indigo-50/50 border border-indigo-100 p-5 rounded-2xl transition-all">
-                    <p class="text-[11px] font-bold text-indigo-400 mb-2 uppercase" data-i18n="modalBusyAuto">Otomatis Sibuk Jam:</p>
-                    <div class="flex gap-2 mb-3">
-                        <input type="time" id="start-time" class="flex-1 border-2 border-indigo-50 bg-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-700 shadow-sm">
-                        <span class="flex items-center text-gray-400 font-bold">-</span>
-                        <input type="time" id="end-time" class="flex-1 border-2 border-indigo-50 bg-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-indigo-400 text-gray-700 shadow-sm">
-                    </div>
-                    <button onclick="setHourlySchedule()" class="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md" data-i18n="btnSetBusy">Setel Jam Sibuk</button>
-                    
-                    <div class="h-px bg-indigo-100 w-full my-4"></div>
-                    <p class="text-[11px] font-bold text-indigo-400 mb-2 uppercase" data-i18n="modalManualStatus">Status Manual:</p>
                     <div class="flex gap-2">
                         <button onclick="setSpecificStatus('Available')" class="flex-1 bg-emerald-50 text-emerald-600 border border-emerald-200 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-100 transition-all" data-i18n="btnAvailManual">Tersedia</button>
                         <button onclick="setSpecificStatus('Busy')" class="flex-1 bg-red-50 text-red-600 border border-red-200 py-2.5 rounded-xl text-sm font-bold hover:bg-red-100 transition-all" data-i18n="btnBusyManual">Sibuk</button>
@@ -298,7 +303,8 @@
             </div>
             
             <div class="mb-6">
-                <p class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider" data-i18n="accProfile">Profil Akun</p>
+                <p class="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider" data-i18n="accProfile">Profil Akun</p>
+                <p class="text-[10px] text-gray-400 mb-3 italic">Tekan nama dan profil untuk mengedit.</p>
                 <div class="bg-gray-50 border border-gray-100 p-5 rounded-2xl transition-all">
                     <div class="flex items-start gap-4 mb-4">
                         <div id="modal-avatar" class="w-14 h-14 mt-1 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl flex items-center justify-center font-bold text-2xl uppercase shrink-0 shadow-inner overflow-hidden relative group"></div>
@@ -385,8 +391,7 @@
                 onboardInfo: "Sepertinya kamu belum terdaftar. Isi data di bawah ini untuk pertama kali masuk!",
                 verifiedEmailLabel: "Email terverifikasi:", btnAvailable: "Tersedia", btnBusy: "Sibuk", btnOff: "Atur Cuti / OFF", btnBusyTime: "Sibuk",
                 offTitle: "Pengaturan Waktu OFF / Izin / Sakit / Libur", offDesc: "Keterangan:", offOpt1: "OFF (Tidak Masuk)", offOpt2: "Izin", offOpt3: "Sakit", offOpt4: "Libur / Cuti",
-                offStart: "Dari Tanggal:", offEnd: "Sampai Tanggal:", btnApply: "Terapkan", modalBusyTitle: "Jadwal Jam Sibuk (Modal)", modalBusyAuto: "Otomatis Sibuk Jam:", btnSetBusy: "Setel Jam Sibuk",
-                modalManualStatus: "Status Manual:", btnAvailManual: "Tersedia", btnBusyManual: "Sibuk", btnDeleteAcc: "Hapus Akun (Keluar Kerja)", confirmDelete: "Yakin ingin menghapus akun ini secara permanen?", alertDeleted: "Akun berhasil dihapus permanen.", alertDuplicate: "Maaf, nama ini sudah terdaftar di email yang lain. Silakan gunakan nama lain.", btnUploadPhoto: "Pilih Foto Galeri..."
+                offStart: "Dari Tanggal:", offEnd: "Sampai Tanggal:", btnApply: "Terapkan", modalManualStatus: "Status Manual:", btnAvailManual: "Tersedia", btnBusyManual: "Sibuk", btnDeleteAcc: "Hapus Akun (Keluar Kerja)", confirmDelete: "Yakin ingin menghapus akun ini secara permanen?", alertDeleted: "Akun berhasil dihapus permanen.", alertDuplicate: "Maaf, nama ini sudah terdaftar di email yang lain. Silakan gunakan nama lain.", btnUploadPhoto: "Pilih Foto Galeri..."
             },
             en: {
                 loginDesc: "Use your Google account to sign in", settings: "Settings", myStatus: "My Status:", 
@@ -406,8 +411,7 @@
                 onboardInfo: "It looks like you are not registered yet. Fill in the data below for the first time!",
                 verifiedEmailLabel: "Verified Email:", btnAvailable: "Available", btnBusy: "Busy", btnOff: "Set Leave / OFF", btnBusyTime: "Busy",
                 offTitle: "Leave / Sick / Holiday Settings", offDesc: "Description:", offOpt1: "OFF (Absent)", offOpt2: "Permit", offOpt3: "Sick", 
-                offOpt4: "Holiday / Leave", offStart: "From Date:", offEnd: "To Date:", btnApply: "Apply", modalBusyTitle: "Busy Hour Schedule", 
-                modalBusyAuto: "Auto Busy at:", btnSetBusy: "Set Busy Time", modalManualStatus: "Manual Status:", btnAvailManual: "Available", 
+                offOpt4: "Holiday / Leave", offStart: "From Date:", offEnd: "To Date:", btnApply: "Apply", modalManualStatus: "Manual Status:", btnAvailManual: "Available", 
                 btnBusyManual: "Busy", btnDeleteAcc: "Delete Account (Resign)", confirmDelete: "Are you sure you want to permanently delete this account?", 
                 alertDeleted: "Account successfully deleted.", alertDuplicate: "Sorry, this name is already registered to another email.", btnUploadPhoto: "Choose from Gallery..."
             },
@@ -429,8 +433,7 @@
                 onboardInfo: "Es sieht so aus, als wären Sie noch nicht registriert. Füllen Sie die untenstehenden Daten aus!",
                 verifiedEmailLabel: "Bestätigte E-Mail:", btnAvailable: "Verfügbar", btnBusy: "Beschäftigt", btnOff: "Urlaub / OFF", btnBusyTime: "Beschäftigt",
                 offTitle: "Urlaubs- / Krankheits- / Feiertagseinstellungen", offDesc: "Beschreibung:", offOpt1: "OFF (Abwesend)", offOpt2: "Erlaubnis", offOpt3: "Krank", 
-                offOpt4: "Urlaub / Feiertag", offStart: "Vom Datum:", offEnd: "Bis Datum:", btnApply: "Anwenden", modalBusyTitle: "Beschäftigt-Zeitplan", 
-                modalBusyAuto: "Automatisch beschäftigt um:", btnSetBusy: "Zeit einstellen", modalManualStatus: "Manueller Status:", btnAvailManual: "Verfügbar", 
+                offOpt4: "Urlaub / Feiertag", offStart: "Vom Datum:", offEnd: "Bis Datum:", btnApply: "Anwenden", modalManualStatus: "Manueller Status:", btnAvailManual: "Verfügbar", 
                 btnBusyManual: "Beschäftigt", btnDeleteAcc: "Konto löschen (Kündigung)", confirmDelete: "Möchten Sie dieses Konto wirklich dauerhaft löschen?", 
                 alertDeleted: "Konto erfolgreich gelöscht.", alertDuplicate: "Entschuldigung, dieser Name ist bereits registriert.", btnUploadPhoto: "Aus Galerie wählen..."
             },
@@ -452,8 +455,7 @@
                 onboardInfo: "Похоже, вы еще не зарегистрированы. Заполните данные ниже!",
                 verifiedEmailLabel: "Подтвержденный Email:", btnAvailable: "Доступен", btnBusy: "Занят", btnOff: "Отпуск / ВЫКЛ", btnBusyTime: "Занят",
                 offTitle: "Настройки отпуска / больничного", offDesc: "Описание:", offOpt1: "ВЫКЛ (Отсутствует)", offOpt2: "Разрешение", offOpt3: "Болен", 
-                offOpt4: "Отпуск / Выходной", offStart: "С даты:", offEnd: "По дату:", btnApply: "Применить", modalBusyTitle: "Расписание занятости", 
-                modalBusyAuto: "Автоматически занят в:", btnSetBusy: "Установить время", modalManualStatus: "Ручной статус:", btnAvailManual: "Доступен", 
+                offOpt4: "Отпуск / Выходной", offStart: "С даты:", offEnd: "По дату:", btnApply: "Применить", modalManualStatus: "Ручной статус:", btnAvailManual: "Доступен", 
                 btnBusyManual: "Занят", btnDeleteAcc: "Удалить аккаунт (Увольнение)", confirmDelete: "Вы уверены, что хотите навсегда удалить этот аккаунт?", 
                 alertDeleted: "Аккаунт успешно удален.", alertDuplicate: "Извините, это имя уже зарегистрировано на другой email.", btnUploadPhoto: "Выбрать из галереи..."
             }
@@ -466,12 +468,13 @@
         let myStatus = "Available";
         let activeUser = null;
         let selectedRoom = null;
-        let unreadCounts = {}; 
         let myEmailId = null; 
         let tempEmail = ""; 
         let busyStartTimeout = null; 
         let busyTimeout = null; 
         let offTimeout = null; 
+        let lastProcessedMessageTime = Date.now(); // Untuk tracking notifikasi baru
+        let notificationList = []; // Array untuk menyimpan riwayat notifikasi
 
         // Fungsi Simpan Cerdas
         function syncUsersDB() {
@@ -493,7 +496,9 @@
                 if(activeUser) viewProfile(activeUser.id);
             });
             dbRef.ref('chats').on('value', (snapshot) => {
-                chatHistory = snapshot.val() || {};
+                const newChatData = snapshot.val() || {};
+                checkForNewMessages(newChatData); // Cek pesan baru sebelum mengupdate
+                chatHistory = newChatData;
                 renderUsers(); 
                 if(activeUser) renderChat();
             });
@@ -506,7 +511,9 @@
                     loadUsersFromDB(); renderUsers(); if (activeUser) viewProfile(activeUser.id);
                 }
                 if (e.key === 'officeConnect_chats') {
-                    chatHistory = JSON.parse(e.newValue || '{}');
+                    const newChatData = JSON.parse(e.newValue || '{}');
+                    checkForNewMessages(newChatData);
+                    chatHistory = newChatData;
                     renderUsers(); if (activeUser) renderChat();
                 }
             });
@@ -533,7 +540,6 @@
                 });
 
                 if (!chatHistory[email]) chatHistory[email] = [];
-                if (unreadCounts[email] === undefined) unreadCounts[email] = 0;
             }
             if(!useFirebase) syncUsersDB();
             
@@ -551,6 +557,93 @@
             return false;
         }
 
+        // --- SISTEM NOTIFIKASI BARU ---
+        function checkForNewMessages(newChatData) {
+            if (!myEmailId || !newChatData[myEmailId]) return;
+            
+            const myNewChats = newChatData[myEmailId];
+            myNewChats.forEach(msg => {
+                // Jika pesan ditujukan untukku, dari orang lain, dan waktunya lebih baru dari proses terakhir
+                if (msg.to === myEmailId && msg.from !== myEmailId && msg.timestamp > lastProcessedMessageTime) {
+                    const senderData = employeeDB[msg.from];
+                    const senderName = senderData ? senderData.name : "Seseorang";
+                    
+                    let notifText = "";
+                    let popUpText = "";
+                    
+                    if (msg.text.includes("Undangan Meeting:")) {
+                        notifText = `📅 <b>${senderName}</b> mengundangmu meeting.`;
+                        popUpText = `${senderName} mengajakmu meeting!`;
+                    } else {
+                        notifText = `💬 <b>${senderName}</b> mengirim pesan baru.`;
+                        popUpText = `Pesan baru dari ${senderName}`;
+                    }
+                    
+                    showToastNotification(popUpText);
+                    addNotificationToList(notifText);
+                    playNotifSound();
+                }
+            });
+            lastProcessedMessageTime = Date.now(); // Update waktu terakhir
+        }
+
+        function showToastNotification(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<strong>🔔 Notifikasi Baru</strong><br><span class="text-xs text-gray-500 mt-1 block">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Hapus toast setelah 4 detik
+            setTimeout(() => {
+                toast.classList.add('closing');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        function addNotificationToList(htmlMessage) {
+            notificationList.unshift({ text: htmlMessage, time: new Date() });
+            updateNotificationPanel();
+        }
+
+        function updateNotificationPanel() {
+            const listContainer = document.getElementById('notif-list');
+            const badge = document.getElementById('notif-badge-top');
+            
+            if (notificationList.length === 0) {
+                listContainer.innerHTML = `<p class="text-gray-400 text-center italic py-6" id="empty-notif" data-i18n="noNotif">Belum ada notifikasi.</p>`;
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+                badge.innerText = notificationList.length > 9 ? "9+" : notificationList.length;
+                
+                listContainer.innerHTML = notificationList.map(notif => {
+                    const timeStr = notif.time.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    return `
+                    <div class="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl mb-2 hover:bg-indigo-50 transition-colors">
+                        <p class="text-gray-700 text-sm">${notif.text}</p>
+                        <p class="text-[10px] text-gray-400 mt-1">${timeStr}</p>
+                    </div>`;
+                }).join('');
+            }
+        }
+
+        function playNotifSound() {
+            const audio = document.getElementById('notif-sound');
+            if(audio) audio.play().catch(e => console.log("Audio autoplay blocked by browser"));
+        }
+        
+        function toggleNotifPanel() { 
+            document.getElementById('notif-panel').classList.toggle('hidden'); 
+            // Reset badge ketika panel dibuka
+            if(!document.getElementById('notif-panel').classList.contains('hidden')) {
+                document.getElementById('notif-badge-top').classList.add('hidden');
+                notificationList = []; // Clear notifikasi (opsional, bisa dihapus jika ingin history tetap ada)
+                setTimeout(updateNotificationPanel, 3000); // Reset UI setelah beberapa detik dibuka
+            }
+        }
+
         // --- 4. REGISTRASI & LOGIN ---
         function toggleRegisterPanel() {
             document.getElementById('login-section').classList.toggle('hidden');
@@ -558,7 +651,6 @@
         }
 
         function saveRegistration() {
-            // FIX: Mengganti titik menjadi koma agar Firebase tidak menolaknya!
             const email = document.getElementById('reg-email').value.trim().toLowerCase().replace(/\./g, ',');
             const name = document.getElementById('reg-name').value.trim();
             const role = document.getElementById('reg-role').value.trim();
@@ -577,7 +669,6 @@
         function handleGoogleCredentialResponse(response) {
             const payload = decodeJwtResponse(response.credential);
             const originalEmail = payload.email.toLowerCase();
-            // FIX: Mengganti titik menjadi koma agar Firebase tidak menolaknya!
             const email = originalEmail.replace(/\./g, ',');
             tempEmail = email;
 
@@ -586,10 +677,9 @@
                 alert("Selamat datang " + userData.name + "!");
                 setupProfileDirectly(userData.name, userData.role, email, userData.avatar);
             } else {
-                // FITUR BARU: PENDAFTARAN OTOMATIS!
                 const givenName = payload.given_name || payload.name || "Karyawan Baru";
                 const avatarUrl = payload.picture || "";
-                const defaultRole = "Pegawai"; // Jabatan default awal
+                const defaultRole = "Pegawai"; 
 
                 if(!checkDuplicateName(givenName, email)) {
                     employeeDB[email] = { name: givenName, role: defaultRole, avatar: avatarUrl, status: "Available", lastLogin: Date.now() };
@@ -597,7 +687,6 @@
                     alert("Pendaftaran otomatis berhasil! Willkommen, " + givenName + "!");
                     setupProfileDirectly(givenName, defaultRole, email, avatarUrl);
                 } else {
-                    // Jika kebetulan nama Google sama dengan nama orang lain di database, arahkan ke manual form
                     document.getElementById('verified-email-text').innerText = originalEmail;
                     document.getElementById('onboard-name-input').value = givenName + " (2)";
                     fadeOut('login-screen', () => {
@@ -620,7 +709,6 @@
         }
 
         function mockGoogleLogin() {
-            // FIX: Mengganti titik menjadi koma
             const email = "noah.admin@office.com".replace(/\./g, ',');
             tempEmail = email;
             if(employeeDB[email]) {
@@ -645,10 +733,11 @@
             employeeDB[email].status = myStatus; 
             syncUsersDB();
             loadUsersFromDB();
+            lastProcessedMessageTime = Date.now(); // Reset waktu notifikasi saat login
 
             document.getElementById('edit-name-input').value = name;
             document.getElementById('edit-role-input').value = role;
-            document.getElementById('modal-display-email').innerText = email.replace(/,/g, '.'); // Kembalikan titik hanya untuk tampilan
+            document.getElementById('modal-display-email').innerText = email.replace(/,/g, '.'); 
             updateAvatarUI('modal-avatar', name, avatarUrl);
 
             fadeOut('login-screen', () => {
@@ -671,6 +760,7 @@
             syncUsersDB();
             myEmailId = tempEmail; 
             loadUsersFromDB();
+            lastProcessedMessageTime = Date.now();
 
             document.getElementById('edit-name-input').value = inputName;
             document.getElementById('edit-role-input').value = inputRole;
@@ -766,13 +856,6 @@
             executeHourlySchedule(startStr, endStr);
         }
 
-        function setHourlySchedule() {
-            const startStr = document.getElementById('start-time').value;
-            const endStr = document.getElementById('end-time').value;
-            if (!startStr || !endStr) { alert("Mohon isi jam mulai dan selesai terlebih dahulu, ya."); return; }
-            executeHourlySchedule(startStr, endStr);
-        }
-
         function executeHourlySchedule(startStr, endStr) {
             const now = new Date();
             const [startHour, startMin] = startStr.split(':');
@@ -860,7 +943,6 @@
             if(mode === 'mobile') mainApp.classList.add('mobile-mode'); else mainApp.classList.remove('mobile-mode');
         }
 
-        function toggleNotifPanel() { document.getElementById('notif-panel').classList.toggle('hidden'); }
         function fadeOut(elementId, callback) {
             const el = document.getElementById(elementId);
             el.classList.remove('opacity-100', 'translate-y-0', 'scale-100'); el.classList.add('opacity-0', 'translate-y-4', 'scale-95');
@@ -1074,7 +1156,8 @@
 
             if(!finalRoom) { alert(words.alertNoRoom); return; }
             
-            const newMsg = { text: `*🤝 Undangan Meeting: ${finalRoom}*`, from: myEmailId, to: activeUser.id, timestamp: Date.now() };
+            // FIX: Menghapus tanda bintang (*)
+            const newMsg = { text: `🤝 Undangan Meeting: ${finalRoom}`, from: myEmailId, to: activeUser.id, timestamp: Date.now() };
             if(!chatHistory[myEmailId]) chatHistory[myEmailId] = []; chatHistory[myEmailId].push(newMsg);
             if(!chatHistory[activeUser.id]) chatHistory[activeUser.id] = []; chatHistory[activeUser.id].push(newMsg);
             syncChatsDB();
